@@ -1,18 +1,10 @@
 from pyspark.ml.regression import GBTRegressor
-from pyspark.ml.feature import VectorAssembler
 
-def train_gbt(df):
-
-    assembler = VectorAssembler(
-        inputCols=["YEAR"],
-        outputCol="features"
-    )
-
-    data = assembler.transform(df)
+def gradient_boosting_model(data):
 
     gbt = GBTRegressor(
         featuresCol="features",
-        labelCol="crime_count"
+        labelCol="total_crime"
     )
 
     model = gbt.fit(data)

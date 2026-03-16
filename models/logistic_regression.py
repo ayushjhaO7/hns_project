@@ -1,18 +1,10 @@
 from pyspark.ml.classification import LogisticRegression
-from pyspark.ml.feature import VectorAssembler
 
-def train_logistic(df):
-
-    assembler = VectorAssembler(
-        inputCols=["YEAR"],
-        outputCol="features"
-    )
-
-    data = assembler.transform(df)
+def logistic_model(data):
 
     lr = LogisticRegression(
         featuresCol="features",
-        labelCol="crime_count"
+        labelCol="total_crime"
     )
 
     model = lr.fit(data)
