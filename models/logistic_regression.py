@@ -1,14 +1,5 @@
 from pyspark.ml.classification import LogisticRegression
 
-def logistic_model(data):
-
-    lr = LogisticRegression(
-        featuresCol="features",
-        labelCol="total_crime"
-    )
-
-    model = lr.fit(data)
-
-    predictions = model.transform(data)
-
-    return predictions
+def train_lr(train_data):
+    lr = LogisticRegression(featuresCol="features", labelCol="label", maxIter=10)
+    return lr.fit(train_data)

@@ -1,41 +1,63 @@
-import folium
-from folium.plugins import HeatMap
 import pandas as pd
+import folium
+import json
+import os
 
-
-def generate_heatmap(spark_df):
-
-    # Convert Spark dataframe to Pandas
-    df = spark_df.toPandas()
-
-    # For demo we map state/district to approximate coordinates
-    # (Later you can replace this with real coordinates dataset)
+def generate_crime_heatmap(csv_path="data/predicted_hotspots.csv", 
+                           topojson_path="data/india_district.json", 
+                           output_path="crime_heatmap.html"):
     
-    location_data = {
-        "DELHI": [28.61, 77.23],
-        "MAHARASHTRA": [19.07, 72.87],
-        "UTTAR PRADESH": [26.85, 80.95],
-        "BIHAR": [25.59, 85.13],
-        "RAJASTHAN": [26.91, 75.78],
-        "TAMIL NADU": [13.08, 80.27],
-        "KARNATAKA": [12.97, 77.59]
+    # 1. Load your AI Prediction Results
+    if not os.path.exists(csv_path):
+        print(f"Error: {csv_path} not found. Run your Spark pipeline first.")
+        return
+    df = pd.read_csv(csv_path)
+
+    # 2. Standardize Casing for Matching
+    # Your JSON uses "Balrampur", but CSV might have "BALRAMPUR"
+    df['DISTRICT'] = df['DISTRICT'].astype(str).str.strip().str.title()
+
+    # 3. Load and Parse TopoJSON
+    with open(topojson_path, 'r') as f:
+        topo_data = json.load(f)
+    
+    # Extract geometries from the specific layer in your file
+    # Internal key from your file: 'india-districts-2019-734'
+    layer_name = 'india-districts-2019-734'
+    geometries = topo_data['objects'][layer_name]['geometries']
+    
+    # Convert TopoJSON objects to a FeatureCollection for Folium compatibility
+    geo_json_features = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": g, # TopoJSON geometries work directly if structured this way
+                "properties": g['properties']
+            } for g in geometries
+        ]
     }
 
-    heat_data = []
+    # 4. Initialize Folium Map (Centered on India)
+    m = folium.Map(location=[20.5937, 78.9629], zoom_start=5, tiles="CartoDB positron")
 
-    for _, row in df.iterrows():
+    # 5. Create the Choropleth Layer
+    folium.Choropleth(
+        geo_data=geo_json_features,
+        name="Crime Risk Hotspots",
+        data=df,
+        columns=["DISTRICT", "predicted_risk_level"],
+        key_on="feature.properties.district", # Matches 'district' in your JSON snippet
+        fill_color="YlOrRd", # Yellow to Red (Hotspot) gradient
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name="AI Predicted Risk Level (0: Low - 4: High)",
+        nan_fill_color="#eeeeee" # Light grey for districts with no data
+    ).add_to(m)
 
-        state = row["STATE/UT"]
+    # 6. Save and Finish
+    m.save(output_path)
+    print(f" Success! Heatmap generated at: {output_path}")
 
-        if state in location_data:
-            lat, lon = location_data[state]
-
-            heat_data.append([lat, lon, row["total_crime"]])
-
-    india_map = folium.Map(location=[22.97, 78.65], zoom_start=5)
-
-    HeatMap(heat_data).add_to(india_map)
-
-    india_map.save("crime_heatmap.html")
-
-    print("crime_heatmap.html generated")
+if __name__ == "__main__":
+    generate_crime_heatmap()

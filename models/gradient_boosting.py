@@ -1,14 +1,5 @@
-from pyspark.ml.regression import GBTRegressor
+from pyspark.ml.classification import GBTClassifier
 
-def gradient_boosting_model(data):
-
-    gbt = GBTRegressor(
-        featuresCol="features",
-        labelCol="total_crime"
-    )
-
-    model = gbt.fit(data)
-
-    predictions = model.transform(data)
-
-    return predictions
+def train_gbt(train_data):
+    gbt = GBTClassifier(featuresCol="features", labelCol="label", maxIter=20)
+    return gbt.fit(train_data)

@@ -1,14 +1,5 @@
-from pyspark.ml.regression import RandomForestRegressor
+from pyspark.ml.classification import RandomForestClassifier
 
-def random_forest_model(data):
-
-    rf = RandomForestRegressor(
-        featuresCol="features",
-        labelCol="total_crime"
-    )
-
-    model = rf.fit(data)
-
-    predictions = model.transform(data)
-
-    return predictions
+def train_rf(train_data):
+    rf = RandomForestClassifier(featuresCol="features", labelCol="label", numTrees=50, maxDepth=5)
+    return rf.fit(train_data)
